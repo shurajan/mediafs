@@ -1,0 +1,124 @@
+{
+  "info": {
+    "name": "MediaFS",
+    "_postman_id": "1a2b3c4d-5678-9012-efab-345678901234",
+    "description": "API for MediaFS file management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Files",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer test-token-123" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/files/list?path=testdata",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["files", "list"],
+          "query": [{ "key": "path", "value": "testdata" }]
+        }
+      }
+    },
+    {
+      "name": "Upload File",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer test-token-123" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": ""
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8080/files/upload?path=testdata/uploaded.txt",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["files", "upload"],
+          "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
+        }
+      }
+    },
+    {
+      "name": "Download File",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer test-token-123" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/files/download?path=testdata/uploaded.txt",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["files", "download"],
+          "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
+        }
+      }
+    },
+    {
+      "name": "Delete File",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer test-token-123" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/files/delete?path=testdata/uploaded.txt",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["files", "delete"],
+          "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
+        }
+      }
+    },
+    {
+      "name": "Rename File",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer test-token-123" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"old_path\": \"testdata/oldname.txt\",\n  \"new_path\": \"testdata/newname.txt\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/files/rename",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["files", "rename"]
+        }
+      }
+    },
+    {
+      "name": "Create Folder",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer test-token-123" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"path\": \"testdata/newfolder\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/folders/create",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["folders", "create"]
+        }
+      }
+    }
+  ]
+}

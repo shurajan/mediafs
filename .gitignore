@@ -1,0 +1,35 @@
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build cache
+/bin/
+/pkg/
+
+# Module & vendor
+vendor/
+go.sum
+go.work
+go.work.sum
+
+# Editor / IDE
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# MediaFS specific
+/.mediafs/
+*.db
+testdata/output/
+coverage.out
