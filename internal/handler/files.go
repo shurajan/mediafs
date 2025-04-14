@@ -18,6 +18,11 @@ func ListFiles(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	if files == nil {
+		files = []service.FileEntry{}
+	}
+
 	return c.JSON(files)
 }
 

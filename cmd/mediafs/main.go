@@ -10,27 +10,16 @@ import (
 )
 
 func authMiddleware(c *fiber.Ctx) error {
-	if service.IsTestMode() {
-		if strings.HasPrefix(c.Get("Authorization"), "Bearer ") {
-			return c.Next()
-		}
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized (test mode)"})
-	}
 
-	//TODO: - В будущем здесь может быть продовая проверка
-	return c.Next()
+	if strings.HasPrefix(c.Get("Authorization"), "Bearer ") {
+		return c.Next()
+	}
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 }
 
 func main() {
 	if err := service.InitMediaFS(); err != nil {
 		log.Fatalf("failed to initialize mediafs: %v", err)
-	}
-
-	if service.IsTestMode() {
-		log.Println("Running in test mode")
-		if err := service.InitTestEnv(); err != nil {
-			log.Fatalf("failed to initialize test env: %v", err)
-		}
 	}
 
 	app := fiber.New()

@@ -6,8 +6,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"io"
 	"mediafs/internal/handler"
+	"mediafs/internal/mediafs"
 	"mediafs/internal/middleware"
-	"mediafs/internal/service"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -17,11 +17,30 @@ import (
 	"testing"
 )
 
-func setupApp() *fiber.App {
-	_ = os.Setenv("MEDIAFS_MODE", "test")
-	_ = service.InitMediaFS()
-	_ = service.InitTestEnv()
+// ───────────────────────────────────────
+// SETUP
+// ───────────────────────────────────────
 
+func setupTestEnv(t *testing.T) string {
+	tmpDir := t.TempDir()
+	if err := mediafs.Init(tmpDir); err != nil {
+		t.Fatalf("failed to init mediafs: %v", err)
+	}
+	return tmpDir
+}
+
+func setupTestFile(relPath string, content []byte) (string, error) {
+	absPath := filepath.Join(mediafs.BaseDir, relPath)
+	if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(absPath, content, 0644); err != nil {
+		return "", err
+	}
+	return absPath, nil
+}
+
+func setupApp() *fiber.App {
 	app := fiber.New()
 	app.Use(middleware.AuthMiddleware)
 
@@ -44,12 +63,17 @@ func do(app *fiber.App, method, url string, body io.Reader, contentType string) 
 	return resp
 }
 
-func TestCreateListFolder(t *testing.T) {
-	app := setupApp()
-	path := "newfolder"
-	_ = os.RemoveAll(filepath.Join(service.TestFilesDir, path))
+// ───────────────────────────────────────
+// TESTS
+// ───────────────────────────────────────
 
+func TestCreateListFolder(t *testing.T) {
+	setupTestEnv(t)
+	app := setupApp()
+
+	path := "newfolder"
 	body := strings.NewReader(`{"path": "` + path + `"}`)
+
 	resp := do(app, "POST", "/folders/create", body, "application/json")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("create failed: %d", resp.StatusCode)
@@ -67,15 +91,23 @@ func TestCreateListFolder(t *testing.T) {
 }
 
 func TestUploadDownloadDelete(t *testing.T) {
+	setupTestEnv(t)
 	app := setupApp()
 
-	srcPath := filepath.Join(service.TestFilesDir, "texts", "hello.txt")
+	srcRelPath := "texts/hello.txt"
+	srcContent := []byte("hello from test upload")
+
+	srcAbsPath, err := setupTestFile(srcRelPath, srcContent)
+	if err != nil {
+		t.Fatalf("failed to setup test file: %v", err)
+	}
+
 	dstRelPath := "testdata/upload.txt"
-	dstAbsPath := filepath.Join(service.TestFilesDir, dstRelPath)
+	dstAbsPath := filepath.Join(mediafs.BaseDir, dstRelPath)
 
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
-	srcFile, _ := os.Open(srcPath)
+	srcFile, _ := os.Open(srcAbsPath)
 	w, _ := writer.CreateFormFile("file", "hello.txt")
 	io.Copy(w, srcFile)
 	srcFile.Close()
@@ -90,6 +122,10 @@ func TestUploadDownloadDelete(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("download failed: %d", resp.StatusCode)
 	}
+	downloaded, _ := io.ReadAll(resp.Body)
+	if !bytes.Equal(downloaded, srcContent) {
+		t.Errorf("downloaded content mismatch")
+	}
 
 	resp = do(app, "DELETE", "/files/delete?path="+dstRelPath, nil, "")
 	if resp.StatusCode != http.StatusOK {
@@ -102,14 +138,17 @@ func TestUploadDownloadDelete(t *testing.T) {
 }
 
 func TestRename(t *testing.T) {
+	setupTestEnv(t)
 	app := setupApp()
+
 	src := "testdata/old.txt"
 	dst := "testdata/new.txt"
+	content := []byte("rename test content")
 
-	// гарантируем наличие исходного файла
-	srcAbs := filepath.Join(service.TestFilesDir, src)
-	_ = os.MkdirAll(filepath.Dir(srcAbs), 0755)
-	_ = os.WriteFile(srcAbs, []byte("rename test"), 0644)
+	_, err := setupTestFile(src, content)
+	if err != nil {
+		t.Fatalf("failed to setup test file: %v", err)
+	}
 
 	payload := map[string]string{"old_path": src, "new_path": dst}
 	jsonBody, _ := json.Marshal(payload)
@@ -119,13 +158,14 @@ func TestRename(t *testing.T) {
 		t.Fatalf("rename failed: %d", resp.StatusCode)
 	}
 
-	dstAbs := filepath.Join(service.TestFilesDir, dst)
+	dstAbs := filepath.Join(mediafs.BaseDir, dst)
 	if _, err := os.Stat(dstAbs); err != nil {
 		t.Fatal("renamed file not found")
 	}
 }
 
 func TestErrorCases(t *testing.T) {
+	setupTestEnv(t)
 	app := setupApp()
 
 	resp := do(app, "GET", "/files/download?path=notfound.txt", nil, "")
@@ -160,14 +200,23 @@ func TestErrorCases(t *testing.T) {
 }
 
 func TestAuth(t *testing.T) {
+	setupTestEnv(t)
 	app := setupApp()
 
+	// создаём пустую папку texts внутри BaseDir
+	textsDir := filepath.Join(mediafs.BaseDir, "texts")
+	if err := os.MkdirAll(textsDir, 0755); err != nil {
+		t.Fatalf("failed to create texts dir: %v", err)
+	}
+
+	// запрос без заголовка
 	req := httptest.NewRequest("GET", "/files/list?path=texts", nil)
 	resp, _ := app.Test(req)
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("expected 401 for missing Authorization header, got %d", resp.StatusCode)
 	}
 
+	// с неверным токеном
 	req = httptest.NewRequest("GET", "/files/list?path=texts", nil)
 	req.Header.Set("Authorization", "Bearer wrong-token")
 	resp, _ = app.Test(req)
@@ -175,6 +224,7 @@ func TestAuth(t *testing.T) {
 		t.Errorf("expected 401 for wrong token, got %d", resp.StatusCode)
 	}
 
+	// с корректным токеном
 	req = httptest.NewRequest("GET", "/files/list?path=texts", nil)
 	req.Header.Set("Authorization", "Bearer test-token-123")
 	resp, _ = app.Test(req)
