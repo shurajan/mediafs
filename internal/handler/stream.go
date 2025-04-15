@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"io"
+	"log"
 	"mediafs/internal/mediafs"
 	"mediafs/internal/service"
 	"mediafs/internal/util"
@@ -21,6 +22,9 @@ func StreamVideo(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	log.Println("📥 StreamVideo requested")
+	log.Println("├─ Raw path (encoded):", absPath)
 
 	file, err := os.Open(absPath)
 	if err != nil {
