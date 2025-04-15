@@ -44,15 +44,27 @@ func StreamVideo(c *fiber.Ctx) error {
 		c.Set("Content-Type", mimeType)
 		c.Set("Content-Length", fmt.Sprintf("%d", size))
 		c.Set("Accept-Ranges", "bytes")
-		return c.SendStream(file)
+		c.Context().SetStatusCode(fiber.StatusOK)
+
+		_, err := io.Copy(c, file)
+		if err != nil {
+			fmt.Println("❌ io.Copy error:", err)
+			return fiber.ErrInternalServerError
+		}
+		return nil
 	}
 
 	var start, end int64
-	fmt.Sscanf(rangeHeader, "bytes=%d-%d", &start, &end)
-	if end == 0 || end >= size {
+	n, _ := fmt.Sscanf(rangeHeader, "bytes=%d-%d", &start, &end)
+	if n == 1 || end >= size {
 		end = size - 1
 	}
 	length := end - start + 1
+
+	_, err = file.Seek(start, io.SeekStart)
+	if err != nil {
+		return fiber.ErrInternalServerError
+	}
 
 	c.Status(fiber.StatusPartialContent)
 	c.Set("Content-Type", mimeType)
@@ -60,9 +72,10 @@ func StreamVideo(c *fiber.Ctx) error {
 	c.Set("Content-Length", strconv.FormatInt(length, 10))
 	c.Set("Accept-Ranges", "bytes")
 
-	_, err = file.Seek(start, io.SeekStart)
+	_, err = io.CopyN(c, file, length)
 	if err != nil {
+		fmt.Println("❌ io.CopyN error:", err)
 		return fiber.ErrInternalServerError
 	}
-	return c.SendStream(io.LimitReader(file, length))
+	return nil
 }

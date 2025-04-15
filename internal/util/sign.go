@@ -26,6 +26,7 @@ func VerifySignature(path string, expires int64, sig string) bool {
 func Generate24hPublicLink(baseURL, path string) string {
 	expires := time.Now().Add(24 * time.Hour).Unix()
 	sig := GenerateSignature(path, expires)
-	return fmt.Sprintf("%s/api/media/public/stream?path=%s&expires=%d&sig=%s",
-		baseURL, url.QueryEscape(path), expires, sig)
+	escaped := url.QueryEscape(path)
+	return fmt.Sprintf("%s/public/media/stream?path=%s&expires=%d&sig=%s",
+		baseURL, escaped, expires, sig)
 }

@@ -12,10 +12,10 @@
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
         "url": {
-          "raw": "http://localhost:8080/files/list?path=testdata",
+          "raw": "http://localhost:8080/api/files/list?path=testdata",
           "host": ["localhost"],
           "port": "8080",
-          "path": ["files", "list"],
+          "path": ["api", "files", "list"],
           "query": [{ "key": "path", "value": "testdata" }]
         }
       }
@@ -36,10 +36,10 @@
           ]
         },
         "url": {
-          "raw": "http://localhost:8080/files/upload?path=testdata/uploaded.txt",
+          "raw": "http://localhost:8080/api/files/upload?path=testdata/uploaded.txt",
           "host": ["localhost"],
           "port": "8080",
-          "path": ["files", "upload"],
+          "path": ["api", "files", "upload"],
           "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
         }
       }
@@ -50,10 +50,10 @@
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
         "url": {
-          "raw": "http://localhost:8080/files/download?path=testdata/uploaded.txt",
+          "raw": "http://localhost:8080/api/files/download?path=testdata/uploaded.txt",
           "host": ["localhost"],
           "port": "8080",
-          "path": ["files", "download"],
+          "path": ["api", "files", "download"],
           "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
         }
       }
@@ -64,10 +64,10 @@
         "method": "DELETE",
         "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
         "url": {
-          "raw": "http://localhost:8080/files/delete?path=testdata/uploaded.txt",
+          "raw": "http://localhost:8080/api/files/delete?path=testdata/uploaded.txt",
           "host": ["localhost"],
           "port": "8080",
-          "path": ["files", "delete"],
+          "path": ["api", "files", "delete"],
           "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
         }
       }
@@ -85,10 +85,10 @@
           "raw": "{\n  \"old_path\": \"testdata/oldname.txt\",\n  \"new_path\": \"testdata/newname.txt\"\n}"
         },
         "url": {
-          "raw": "http://localhost:8080/files/rename",
+          "raw": "http://localhost:8080/api/files/rename",
           "host": ["localhost"],
           "port": "8080",
-          "path": ["files", "rename"]
+          "path": ["api", "files", "rename"]
         }
       }
     },
@@ -105,10 +105,10 @@
           "raw": "{\n  \"path\": \"testdata/newfolder\"\n}"
         },
         "url": {
-          "raw": "http://localhost:8080/folders/create",
+          "raw": "http://localhost:8080/api/folders/create",
           "host": ["localhost"],
           "port": "8080",
-          "path": ["folders", "create"]
+          "path": ["api", "folders", "create"]
         }
       }
     },
@@ -146,10 +146,10 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:8080/api/media/public/stream?path=videos/sample.mp4&expires=...&sig=...",
+          "raw": "http://localhost:8080/public/media/stream?path=videos/sample.mp4&expires=...&sig=...",
           "host": ["localhost"],
           "port": "8080",
-          "path": ["api", "media", "public", "stream"],
+          "path": ["public", "media", "stream"],
           "query": [
             { "key": "path", "value": "videos/sample.mp4" },
             { "key": "expires", "value": "" },

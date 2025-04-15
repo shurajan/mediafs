@@ -15,7 +15,6 @@ func main() {
 
 	app := fiber.New()
 
-	// Регистрируем все маршруты
 	router.RegisterRoutes(app)
 
 	log.Println("MediaFS running on :8080")
