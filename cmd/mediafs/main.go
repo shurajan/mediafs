@@ -2,21 +2,65 @@ package main
 
 import (
 	"log"
-	"mediafs/internal/mediafs"
-	"mediafs/internal/router"
+	"os"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/grandcat/zeroconf"
+
+	"mediafs/internal/handler"
+	"mediafs/internal/middleware"
+)
+
+const (
+	token = "supersecret"
+	port  = ":8000"
 )
 
 func main() {
-	if err := mediafs.Init(); err != nil {
-		log.Fatalf("failed to initialize mediafs: %v", err)
-	}
+	baseDir := ensureMediaFS()
 
 	app := fiber.New()
+	app.Use(middleware.BearerAuth(token))
 
-	router.RegisterRoutes(app)
+	app.Get("/files", handler.ListFiles(baseDir))
+	app.Get("/files/:filename", handler.StreamFile(baseDir))
+	app.Delete("/files/:filename", handler.DeleteFile(baseDir))
 
-	log.Println("MediaFS running on :8000")
-	log.Fatal(app.Listen(":8000"))
+	go publishBonjour()
+
+	log.Println("📡 MediaFS running on " + port)
+	log.Fatal(app.Listen(port))
+}
+
+func ensureMediaFS() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal("Can't find home dir:", err)
+	}
+	path := filepath.Join(home, ".mediafs")
+	err = os.MkdirAll(path, 0755)
+	if err != nil {
+		log.Fatal("Can't create mediafs dir:", err)
+	}
+	return path
+}
+
+func publishBonjour() {
+	server, err := zeroconf.Register(
+		"MediaFS",
+		"_http._tcp",
+		"local.",
+		8000,
+		nil,
+		nil,
+	)
+	if err != nil {
+		log.Println("❌ Failed to publish Bonjour service:", err)
+		return
+	}
+	log.Println("✅ Bonjour service 'MediaFS._http._tcp.local' published")
+
+	<-make(chan struct{})
+	defer server.Shutdown()
 }

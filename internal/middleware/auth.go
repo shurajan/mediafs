@@ -1,16 +1,12 @@
 package middleware
 
-import (
-	"github.com/gofiber/fiber/v2"
-)
+import "github.com/gofiber/fiber/v2"
 
-func AuthMiddleware(c *fiber.Ctx) error {
-	const expectedToken = "Bearer test-token-123"
-
-	//TODO  - добавить авторизацию
-	if c.Get("Authorization") != expectedToken {
-		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+func BearerAuth(expectedToken string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if c.Get("Authorization") != "Bearer "+expectedToken {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+		}
+		return c.Next()
 	}
-
-	return c.Next()
 }

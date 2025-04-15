@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "MediaFS",
-    "_postman_id": "1a2b3c4d-5678-9012-efab-345678901234",
-    "description": "API for MediaFS file management and streaming",
+    "_postman_id": "mediafs-collection-uuid",
+    "description": "Postman collection for testing MediaFS API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -10,153 +10,65 @@
       "name": "List Files",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer supersecret",
+            "type": "text"
+          }
+        ],
         "url": {
-          "raw": "http://localhost:8000/api/files/list?path=testdata",
+          "raw": "http://localhost:8000/files",
+          "protocol": "http",
           "host": ["localhost"],
           "port": "8000",
-          "path": ["api", "files", "list"],
-          "query": [{ "key": "path", "value": "testdata" }]
+          "path": ["files"]
         }
-      }
+      },
+      "response": []
     },
     {
-      "name": "Upload File",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
-        "body": {
-          "mode": "formdata",
-          "formdata": [
-            {
-              "key": "file",
-              "type": "file",
-              "src": ""
-            }
-          ]
-        },
-        "url": {
-          "raw": "http://localhost:8000/api/files/upload?path=testdata/uploaded.txt",
-          "host": ["localhost"],
-          "port": "8000",
-          "path": ["api", "files", "upload"],
-          "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
-        }
-      }
-    },
-    {
-      "name": "Download File",
+      "name": "Get File",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer supersecret",
+            "type": "text"
+          }
+        ],
         "url": {
-          "raw": "http://localhost:8000/api/files/download?path=testdata/uploaded.txt",
+          "raw": "http://localhost:8000/files/{{filename}}",
+          "protocol": "http",
           "host": ["localhost"],
           "port": "8000",
-          "path": ["api", "files", "download"],
-          "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
+          "path": ["files", "{{filename}}"]
         }
-      }
+      },
+      "response": []
     },
     {
       "name": "Delete File",
       "request": {
         "method": "DELETE",
-        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
-        "url": {
-          "raw": "http://localhost:8000/api/files/delete?path=testdata/uploaded.txt",
-          "host": ["localhost"],
-          "port": "8000",
-          "path": ["api", "files", "delete"],
-          "query": [{ "key": "path", "value": "testdata/uploaded.txt" }]
-        }
-      }
-    },
-    {
-      "name": "Rename File",
-      "request": {
-        "method": "PUT",
         "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer test-token-123" }
+          {
+            "key": "Authorization",
+            "value": "Bearer supersecret",
+            "type": "text"
+          }
         ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"old_path\": \"testdata/oldname.txt\",\n  \"new_path\": \"testdata/newname.txt\"\n}"
-        },
         "url": {
-          "raw": "http://localhost:8000/api/files/rename",
+          "raw": "http://localhost:8000/files/{{filename}}",
+          "protocol": "http",
           "host": ["localhost"],
           "port": "8000",
-          "path": ["api", "files", "rename"]
+          "path": ["files", "{{filename}}"]
         }
-      }
-    },
-    {
-      "name": "Create Folder",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer test-token-123" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"path\": \"testdata/newfolder\"\n}"
-        },
-        "url": {
-          "raw": "http://localhost:8000/api/folders/create",
-          "host": ["localhost"],
-          "port": "8000",
-          "path": ["api", "folders", "create"]
-        }
-      }
-    },
-    {
-      "name": "Stream Video (Private)",
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
-        "url": {
-          "raw": "http://localhost:8000/api/media/stream?path=videos/sample.mp4",
-          "host": ["localhost"],
-          "port": "8000",
-          "path": ["api", "media", "stream"],
-          "query": [{ "key": "path", "value": "videos/sample.mp4" }]
-        }
-      }
-    },
-    {
-      "name": "Generate Public Link (24h)",
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
-        "url": {
-          "raw": "http://localhost:8000/api/media/public/share?path=videos/sample.mp4",
-          "host": ["localhost"],
-          "port": "8000",
-          "path": ["api", "media", "public", "share"],
-          "query": [{ "key": "path", "value": "videos/sample.mp4" }]
-        }
-      }
-    },
-    {
-      "name": "Stream Video (Public)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8000/public/media/stream?path=videos/sample.mp4&expires=...&sig=...",
-          "host": ["localhost"],
-          "port": "8000",
-          "path": ["public", "media", "stream"],
-          "query": [
-            { "key": "path", "value": "videos/sample.mp4" },
-            { "key": "expires", "value": "" },
-            { "key": "sig", "value": "" }
-          ]
-        }
-      }
+      },
+      "response": []
     }
-  ]
+  ],
+  "event": []
 }
