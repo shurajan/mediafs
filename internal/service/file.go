@@ -76,6 +76,47 @@ func UploadFile(relPath string, data io.Reader) error {
 	return err
 }
 
+func AppendChunk(relPath string, data io.Reader) error {
+	tempPath, err := util.ResolveSafePath(mediafs.BaseDir, relPath+".upload")
+	if err != nil {
+		log.Printf("[AppendChunk] invalid temp path %q: %v", relPath, err)
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(tempPath), 0755); err != nil {
+		log.Printf("[AppendChunk] mkdir failed for %q: %v", tempPath, err)
+		return err
+	}
+	f, err := os.OpenFile(tempPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Printf("[AppendChunk] open failed for %q: %v", tempPath, err)
+		return err
+	}
+	defer f.Close()
+	if _, err := io.Copy(f, data); err != nil {
+		log.Printf("[AppendChunk] write failed for %q: %v", tempPath, err)
+		return err
+	}
+	return nil
+}
+
+func FinalizeChunkUpload(relPath string) error {
+	tempPath, err := util.ResolveSafePath(mediafs.BaseDir, relPath+".upload")
+	if err != nil {
+		log.Printf("[FinalizeChunkUpload] invalid temp path %q: %v", relPath, err)
+		return err
+	}
+	finalPath, err := util.ResolveSafePath(mediafs.BaseDir, relPath)
+	if err != nil {
+		log.Printf("[FinalizeChunkUpload] invalid final path %q: %v", relPath, err)
+		return err
+	}
+	if err := os.Rename(tempPath, finalPath); err != nil {
+		log.Printf("[FinalizeChunkUpload] rename failed %q → %q: %v", tempPath, finalPath, err)
+		return err
+	}
+	return nil
+}
+
 func DeleteFile(relPath string) error {
 	path, err := util.ResolveSafePath(mediafs.BaseDir, relPath)
 	if err != nil {

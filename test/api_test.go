@@ -42,14 +42,20 @@ func setupTestFile(relPath string, content []byte) (string, error) {
 
 func setupApp() *fiber.App {
 	app := fiber.New()
-	app.Use(middleware.AuthMiddleware)
 
-	app.Get("/files/list", handler.ListFiles)
-	app.Post("/files/upload", handler.UploadFile)
-	app.Get("/files/download", handler.DownloadFile)
-	app.Delete("/files/delete", handler.DeleteFile)
-	app.Put("/files/rename", handler.RenameFile)
-	app.Post("/folders/create", handler.CreateFolder)
+	auth := app.Group("/api", middleware.AuthMiddleware)
+	auth.Get("/files/list", handler.ListFiles)
+	auth.Post("/files/upload", handler.UploadFile)
+	auth.Get("/files/download", handler.DownloadFile)
+	auth.Delete("/files/delete", handler.DeleteFile)
+	auth.Put("/files/rename", handler.RenameFile)
+	auth.Post("/folders/create", handler.CreateFolder)
+	auth.Get("/media/public/share", handler.GeneratePublicLink)
+	auth.Get("/media/stream", handler.StreamVideo)
+
+	public := app.Group("/public")
+	public.Get("/media/stream", handler.StreamPublicVideo)
+
 	return app
 }
 
@@ -74,12 +80,12 @@ func TestCreateListFolder(t *testing.T) {
 	path := "newfolder"
 	body := strings.NewReader(`{"path": "` + path + `"}`)
 
-	resp := do(app, "POST", "/folders/create", body, "application/json")
+	resp := do(app, "POST", "/api/folders/create", body, "application/json")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("create failed: %d", resp.StatusCode)
 	}
 
-	resp = do(app, "GET", "/files/list?path=newfolder", nil, "")
+	resp = do(app, "GET", "/api/files/list?path=newfolder", nil, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("list failed: %d", resp.StatusCode)
 	}
@@ -101,7 +107,6 @@ func TestUploadDownloadDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to setup test file: %v", err)
 	}
-
 	dstRelPath := "testdata/upload.txt"
 	dstAbsPath := filepath.Join(mediafs.BaseDir, dstRelPath)
 
@@ -113,12 +118,12 @@ func TestUploadDownloadDelete(t *testing.T) {
 	srcFile.Close()
 	writer.Close()
 
-	resp := do(app, "POST", "/files/upload?path="+dstRelPath, &buf, writer.FormDataContentType())
+	resp := do(app, "POST", "/api/files/upload?path="+dstRelPath, &buf, writer.FormDataContentType())
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("upload failed: %d", resp.StatusCode)
 	}
 
-	resp = do(app, "GET", "/files/download?path="+dstRelPath, nil, "")
+	resp = do(app, "GET", "/api/files/download?path="+dstRelPath, nil, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("download failed: %d", resp.StatusCode)
 	}
@@ -127,7 +132,7 @@ func TestUploadDownloadDelete(t *testing.T) {
 		t.Errorf("downloaded content mismatch")
 	}
 
-	resp = do(app, "DELETE", "/files/delete?path="+dstRelPath, nil, "")
+	resp = do(app, "DELETE", "/api/files/delete?path="+dstRelPath, nil, "")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("delete failed: %d", resp.StatusCode)
 	}
@@ -153,11 +158,10 @@ func TestRename(t *testing.T) {
 	payload := map[string]string{"old_path": src, "new_path": dst}
 	jsonBody, _ := json.Marshal(payload)
 
-	resp := do(app, "PUT", "/files/rename", bytes.NewReader(jsonBody), "application/json")
+	resp := do(app, "PUT", "/api/files/rename", bytes.NewReader(jsonBody), "application/json")
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("rename failed: %d", resp.StatusCode)
 	}
-
 	dstAbs := filepath.Join(mediafs.BaseDir, dst)
 	if _, err := os.Stat(dstAbs); err != nil {
 		t.Fatal("renamed file not found")
@@ -168,32 +172,32 @@ func TestErrorCases(t *testing.T) {
 	setupTestEnv(t)
 	app := setupApp()
 
-	resp := do(app, "GET", "/files/download?path=notfound.txt", nil, "")
+	resp := do(app, "GET", "/api/files/download?path=notfound.txt", nil, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("expected 404 for missing file, got %d", resp.StatusCode)
 	}
 
-	resp = do(app, "DELETE", "/files/delete?path=notfound.txt", nil, "")
+	resp = do(app, "DELETE", "/api/files/delete?path=notfound.txt", nil, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("expected 500 for delete missing, got %d", resp.StatusCode)
 	}
 
-	resp = do(app, "POST", "/files/upload?path=err.txt", nil, "")
+	resp = do(app, "POST", "/api/files/upload?path=err.txt", nil, "")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("expected 400 for missing file, got %d", resp.StatusCode)
 	}
 
-	resp = do(app, "PUT", "/files/rename", strings.NewReader("invalid"), "application/json")
+	resp = do(app, "PUT", "/api/files/rename", strings.NewReader("invalid"), "application/json")
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("expected 400 for invalid json, got %d", resp.StatusCode)
 	}
 
-	resp = do(app, "GET", "/files/list?path=../../", nil, "")
+	resp = do(app, "GET", "/api/files/list?path=../../", nil, "")
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected error for outside base dir, got %d", resp.StatusCode)
 	}
 
-	resp = do(app, "DELETE", "/files/delete?path=/etc/passwd", nil, "")
+	resp = do(app, "DELETE", "/api/files/delete?path=/etc/passwd", nil, "")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("expected error for forbidden absolute path, got %d", resp.StatusCode)
 	}
@@ -203,29 +207,25 @@ func TestAuth(t *testing.T) {
 	setupTestEnv(t)
 	app := setupApp()
 
-	// создаём пустую папку texts внутри BaseDir
 	textsDir := filepath.Join(mediafs.BaseDir, "texts")
 	if err := os.MkdirAll(textsDir, 0755); err != nil {
 		t.Fatalf("failed to create texts dir: %v", err)
 	}
 
-	// запрос без заголовка
-	req := httptest.NewRequest("GET", "/files/list?path=texts", nil)
+	req := httptest.NewRequest("GET", "/api/files/list?path=texts", nil)
 	resp, _ := app.Test(req)
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("expected 401 for missing Authorization header, got %d", resp.StatusCode)
 	}
 
-	// с неверным токеном
-	req = httptest.NewRequest("GET", "/files/list?path=texts", nil)
+	req = httptest.NewRequest("GET", "/api/files/list?path=texts", nil)
 	req.Header.Set("Authorization", "Bearer wrong-token")
 	resp, _ = app.Test(req)
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("expected 401 for wrong token, got %d", resp.StatusCode)
 	}
 
-	// с корректным токеном
-	req = httptest.NewRequest("GET", "/files/list?path=texts", nil)
+	req = httptest.NewRequest("GET", "/api/files/list?path=texts", nil)
 	req.Header.Set("Authorization", "Bearer test-token-123")
 	resp, _ = app.Test(req)
 	if resp.StatusCode != http.StatusOK {

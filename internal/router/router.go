@@ -15,6 +15,7 @@ func registerAuthRoutes(app *fiber.App) {
 	auth := app.Group("/api", middleware.AuthMiddleware)
 	auth.Get("/files/list", handler.ListFiles)
 	auth.Post("/files/upload", handler.UploadFile)
+	auth.Post("/files/upload/chunk", handler.ChunkUploadHandler)
 	auth.Get("/files/download", handler.DownloadFile)
 	auth.Delete("/files/delete", handler.DeleteFile)
 	auth.Put("/files/rename", handler.RenameFile)
