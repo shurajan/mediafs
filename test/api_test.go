@@ -23,7 +23,7 @@ import (
 
 func setupTestEnv(t *testing.T) string {
 	tmpDir := t.TempDir()
-	if err := mediafs.Init(tmpDir); err != nil {
+	if err := mediafs.Init(); err != nil {
 		t.Fatalf("failed to init mediafs: %v", err)
 	}
 	return tmpDir

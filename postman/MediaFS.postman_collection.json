@@ -2,7 +2,7 @@
   "info": {
     "name": "MediaFS",
     "_postman_id": "1a2b3c4d-5678-9012-efab-345678901234",
-    "description": "API for MediaFS file management",
+    "description": "API for MediaFS file management and streaming",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -10,9 +10,7 @@
       "name": "List Files",
       "request": {
         "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer test-token-123" }
-        ],
+        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
         "url": {
           "raw": "http://localhost:8080/files/list?path=testdata",
           "host": ["localhost"],
@@ -26,9 +24,7 @@
       "name": "Upload File",
       "request": {
         "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer test-token-123" }
-        ],
+        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -52,9 +48,7 @@
       "name": "Download File",
       "request": {
         "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer test-token-123" }
-        ],
+        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
         "url": {
           "raw": "http://localhost:8080/files/download?path=testdata/uploaded.txt",
           "host": ["localhost"],
@@ -68,9 +62,7 @@
       "name": "Delete File",
       "request": {
         "method": "DELETE",
-        "header": [
-          { "key": "Authorization", "value": "Bearer test-token-123" }
-        ],
+        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
         "url": {
           "raw": "http://localhost:8080/files/delete?path=testdata/uploaded.txt",
           "host": ["localhost"],
@@ -117,6 +109,52 @@
           "host": ["localhost"],
           "port": "8080",
           "path": ["folders", "create"]
+        }
+      }
+    },
+    {
+      "name": "Stream Video (Private)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
+        "url": {
+          "raw": "http://localhost:8080/api/media/stream?path=videos/sample.mp4",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "media", "stream"],
+          "query": [{ "key": "path", "value": "videos/sample.mp4" }]
+        }
+      }
+    },
+    {
+      "name": "Generate Public Link (24h)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer test-token-123" }],
+        "url": {
+          "raw": "http://localhost:8080/api/media/public/share?path=videos/sample.mp4",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "media", "public", "share"],
+          "query": [{ "key": "path", "value": "videos/sample.mp4" }]
+        }
+      }
+    },
+    {
+      "name": "Stream Video (Public)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/media/public/stream?path=videos/sample.mp4&expires=...&sig=...",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "media", "public", "stream"],
+          "query": [
+            { "key": "path", "value": "videos/sample.mp4" },
+            { "key": "expires", "value": "" },
+            { "key": "sig", "value": "" }
+          ]
         }
       }
     }
