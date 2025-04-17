@@ -7,13 +7,48 @@
   },
   "item": [
     {
+      "name": "Auth",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"password\": \"your_password_here\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/auth",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["auth"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const res = pm.response.json();",
+              "if (res.token) {",
+              "  pm.collectionVariables.set(\"mediafs_token\", res.token);",
+              "  console.log(\"✅ Token saved to mediafs_token\");",
+              "} else {",
+              "  console.error(\"❌ No token received\");",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
       "name": "List Files",
       "request": {
         "method": "GET",
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer supersecret",
+            "value": "Bearer {{mediafs_token}}",
             "type": "text"
           }
         ],
@@ -34,7 +69,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer supersecret",
+            "value": "Bearer {{mediafs_token}}",
             "type": "text"
           }
         ],
@@ -55,7 +90,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer supersecret",
+            "value": "Bearer {{mediafs_token}}",
             "type": "text"
           }
         ],
@@ -70,5 +105,17 @@
       "response": []
     }
   ],
-  "event": []
+  "event": [],
+  "variable": [
+    {
+      "key": "mediafs_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "filename",
+      "value": "example.mp4",
+      "type": "string"
+    }
+  ]
 }

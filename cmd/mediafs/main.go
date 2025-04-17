@@ -1,33 +1,44 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"github.com/gofiber/fiber/v2"
 	"log"
 	"os"
 	"path/filepath"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/grandcat/zeroconf"
-
 	"mediafs/internal/handler"
 	"mediafs/internal/middleware"
+	"mediafs/internal/service"
 )
 
-const (
-	token = "supersecret"
-	port  = ":8000"
-)
+const port = ":8000"
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "hash-password" {
+		handlePasswordHashing()
+		return
+	}
+
 	baseDir := ensureMediaFS()
+	authPath := filepath.Join(baseDir, "auth.json")
+	authService := service.NewAuthService(authPath)
+
+	if err := authService.Load(); err != nil {
+		log.Fatal("❌ auth.json not found. Create it first with `mediafs hash-password`.")
+	}
 
 	app := fiber.New()
-	app.Use(middleware.BearerAuth(token))
+
+	app.Post("/auth", handler.AuthHandler(authService))
+	app.Use(middleware.BearerAuthMiddleware(authService))
 
 	app.Get("/files", handler.ListFiles(baseDir))
 	app.Get("/files/:filename", handler.StreamFile(baseDir))
 	app.Delete("/files/:filename", handler.DeleteFile(baseDir))
 
-	go publishBonjour()
+	go service.PublishBonjour()
 
 	log.Println("📡 MediaFS running on " + port)
 	log.Fatal(app.Listen(port))
@@ -46,21 +57,33 @@ func ensureMediaFS() string {
 	return path
 }
 
-func publishBonjour() {
-	server, err := zeroconf.Register(
-		"MediaFS",
-		"_http._tcp",
-		"local.",
-		8000,
-		nil,
-		nil,
-	)
-	if err != nil {
-		log.Println("❌ Failed to publish Bonjour service:", err)
-		return
+func handlePasswordHashing() {
+	hashCmd := flag.NewFlagSet("hash-password", flag.ExitOnError)
+	passwordPtr := hashCmd.String("password", "", "Password to hash and save")
+	_ = hashCmd.Parse(os.Args[2:])
+	if *passwordPtr == "" {
+		log.Fatal("❌ Please provide --password")
 	}
-	log.Println("✅ Bonjour service 'MediaFS._http._tcp.local' published")
 
-	<-make(chan struct{})
-	defer server.Shutdown()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal("Can't find home dir:", err)
+	}
+	authPath := filepath.Join(home, ".mediafs", "auth.json")
+
+	authService := service.NewAuthService(authPath)
+	if _, err := os.Stat(authPath); err == nil {
+		var response string
+		fmt.Printf("⚠️  %s already exists. Overwrite? Type 'yes' to confirm: ", authPath)
+		fmt.Scanln(&response)
+		if response != "yes" {
+			fmt.Println("❌ Aborted.")
+			return
+		}
+	}
+
+	if err := authService.SetPassword(*passwordPtr); err != nil {
+		log.Fatal("Failed to save password:", err)
+	}
+	fmt.Println("✅ Password hash saved to:", authPath)
 }

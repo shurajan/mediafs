@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"mediafs/internal/handler"
-	"mediafs/internal/middleware"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,7 +22,15 @@ const (
 
 func setupTestApp(baseDir string) *fiber.App {
 	app := fiber.New()
-	app.Use(middleware.BearerAuth(testToken))
+
+	app.Use(func(c *fiber.Ctx) error {
+		auth := c.Get("Authorization")
+		if auth != "Bearer "+testToken {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+		}
+		return c.Next()
+	})
+
 	app.Get("/files", handler.ListFiles(baseDir))
 	app.Get("/files/:filename", handler.StreamFile(baseDir))
 	app.Delete("/files/:filename", handler.DeleteFile(baseDir))
@@ -63,39 +70,68 @@ func TestMediaFS(t *testing.T) {
 
 	app := setupTestApp(baseDir)
 
-	// 1. Список файлов
-	req := httptest.NewRequest(http.MethodGet, "/files", nil)
-	req.Header.Set("Authorization", "Bearer "+testToken)
-	resp, err := app.Test(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		t.Fatal("List files failed:", err)
-	}
-	body, _ := io.ReadAll(resp.Body)
-	if !bytes.Contains(body, []byte(testFile)) {
-		t.Error("test file not found in response")
-	}
+	t.Run("unauthorized access returns 401", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/files", nil)
+		resp, _ := app.Test(req)
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Error("expected 401 for missing token")
+		}
+	})
 
-	// 2. Получение файла
-	req = httptest.NewRequest(http.MethodGet, "/files/"+testFile, nil)
-	req.Header.Set("Authorization", "Bearer "+testToken)
-	resp, err = app.Test(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		t.Fatal("Stream file failed:", err)
-	}
-	content, _ := io.ReadAll(resp.Body)
-	if !bytes.Equal(content, []byte("dummy content")) {
-		t.Error("file content mismatch")
-	}
+	t.Run("list files", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/files", nil)
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		resp, err := app.Test(req)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			t.Fatal("List files failed:", err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		if !bytes.Contains(body, []byte(testFile)) {
+			t.Error("test file not found in response")
+		}
+	})
 
-	// 3. Удаление файла
-	req = httptest.NewRequest(http.MethodDelete, "/files/"+testFileTS, nil)
-	req.Header.Set("Authorization", "Bearer "+testToken)
-	resp, err = app.Test(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		t.Fatal("Delete file failed:", err)
-	}
+	t.Run("stream file", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/files/"+testFile, nil)
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		resp, err := app.Test(req)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			t.Fatal("Stream file failed:", err)
+		}
+		content, _ := io.ReadAll(resp.Body)
+		if !bytes.Equal(content, []byte("dummy content")) {
+			t.Error("file content mismatch")
+		}
+	})
 
-	if _, err := os.Stat(filepath.Join(baseDir, testFileTS)); !os.IsNotExist(err) {
-		t.Error("file was not deleted")
-	}
+	t.Run("delete file", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/files/"+testFileTS, nil)
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		resp, err := app.Test(req)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			t.Fatal("Delete file failed:", err)
+		}
+
+		if _, err := os.Stat(filepath.Join(baseDir, testFileTS)); !os.IsNotExist(err) {
+			t.Error("file was not deleted")
+		}
+	})
+
+	t.Run("stream deleted file returns 404", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/files/"+testFileTS, nil)
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		resp, err := app.Test(req)
+		if err != nil || resp.StatusCode != http.StatusNotFound {
+			t.Error("expected 404 after deleted file, got:", resp.StatusCode)
+		}
+	})
+
+	t.Run("delete nonexistent file returns 404", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/files/missing.ts", nil)
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		resp, err := app.Test(req)
+		if err != nil || resp.StatusCode != http.StatusNotFound {
+			t.Error("expected 404 for missing file")
+		}
+	})
 }

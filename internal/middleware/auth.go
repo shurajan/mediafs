@@ -1,10 +1,16 @@
 package middleware
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"strings"
 
-func BearerAuth(expectedToken string) fiber.Handler {
+	"github.com/gofiber/fiber/v2"
+	"mediafs/internal/service"
+)
+
+func BearerAuthMiddleware(auth *service.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		if c.Get("Authorization") != "Bearer "+expectedToken {
+		authHeader := c.Get("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") || !auth.CheckToken(strings.TrimPrefix(authHeader, "Bearer ")) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 		}
 		return c.Next()
