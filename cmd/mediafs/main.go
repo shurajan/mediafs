@@ -36,13 +36,6 @@ func main() {
 	baseDir := ensureMediaFS()
 	authService := setupAuth(baseDir)
 	app := setupFiberApp(baseDir, authService)
-	bonjourService := service.NewBonjourService(service.DefaultBonjourConfig())
-
-	// Запуск Bonjour-сервиса
-	if err := bonjourService.Start(); err != nil {
-		log.Printf("⚠️ Bonjour service error: %v", err)
-	}
-	defer bonjourService.Stop()
 
 	// WaitGroup для всех горутин
 	var wg sync.WaitGroup
