@@ -3,13 +3,11 @@ package handler
 import (
 	"fmt"
 	"io"
+	"mediafs/internal/media"
 	"mime"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,6 +26,7 @@ func ListFiles(baseDir string) fiber.Handler {
 			Name       string  `json:"name"`
 			Size       int64   `json:"size"`
 			Resolution *string `json:"resolution"`
+			Duration   *int    `json:"duration"`
 			PreviewURL *string `json:"previewURL"`
 		}
 
@@ -42,13 +41,14 @@ func ListFiles(baseDir string) fiber.Handler {
 						continue
 					}
 
-					// Получаем разрешение видео используя ffprobe
-					resolution := getVideoResolution(fullPath)
+					resolution := media.GetVideoResolution(fullPath)
+					duration := media.GetVideoDuration(fullPath)
 
 					files = append(files, MediaFile{
 						Name:       entry.Name(),
 						Size:       info.Size(),
 						Resolution: resolution,
+						Duration:   duration,
 						PreviewURL: nil, // можно позже формировать
 					})
 				}
@@ -56,43 +56,6 @@ func ListFiles(baseDir string) fiber.Handler {
 		}
 		return c.JSON(files)
 	}
-}
-
-// Функция для получения разрешения видео с использованием ffprobe
-func getVideoResolution(filePath string) *string {
-	// Проверим кэш
-	if val, ok := resolutionCache.Load(filePath); ok {
-		if cachedRes, ok := val.(*string); ok {
-			return cachedRes
-		}
-	}
-
-	// Иначе получаем через ffprobe
-	cmd := exec.Command("ffprobe",
-		"-v", "error",
-		"-select_streams", "v:0",
-		"-show_entries", "stream=width,height",
-		"-of", "csv=s=x:p=0",
-		filePath)
-
-	output, err := cmd.Output()
-	if err != nil {
-		return nil
-	}
-
-	resolution := strings.TrimSpace(string(output))
-	if resolution == "" {
-		return nil
-	}
-
-	re := regexp.MustCompile(`^\d+x\d+$`)
-	if !re.MatchString(resolution) {
-		return nil
-	}
-	
-	resolutionCache.Store(filePath, &resolution)
-
-	return &resolution
 }
 
 func StreamFile(baseDir string) fiber.Handler {
