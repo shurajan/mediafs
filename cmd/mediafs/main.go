@@ -23,31 +23,24 @@ const (
 )
 
 func main() {
+	baseDir, metaDir := ensureMediaFS()
+
 	if len(os.Args) > 1 && os.Args[1] == cmdHashPasswd {
-		handlePasswordHashing()
+		handlePasswordHashing(metaDir)
 		return
 	}
-
+	authService := setupAuth(metaDir)
 	// Настройка контекста для управления жизненным циклом
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Инициализация компонентов
-	baseDir := ensureMediaFS()
-	authService := setupAuth(baseDir)
 	app := setupFiberApp(baseDir, authService)
-	bonjourService := service.NewBonjourService(service.DefaultBonjourConfig())
-
-	// Запуск Bonjour-сервиса
-	if err := bonjourService.Start(); err != nil {
-		log.Printf("⚠️ Bonjour service error: %v", err)
-	}
-	defer bonjourService.Stop()
 
 	// WaitGroup для всех горутин
 	var wg sync.WaitGroup
 
-	// Запуск HTTP-сервера
+	// Запуск HTTP‑сервера
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -70,7 +63,7 @@ func main() {
 		log.Println("🛑 Context canceled, shutting down...")
 	}
 
-	// Останавливаем HTTP-сервер
+	// Останавливаем HTTP‑сервер
 	if err := app.Shutdown(); err != nil {
 		log.Printf("❌ Error during shutdown: %v", err)
 	}
@@ -81,8 +74,8 @@ func main() {
 }
 
 // setupAuth настраивает сервис аутентификации
-func setupAuth(baseDir string) *service.AuthService {
-	authPath := filepath.Join(baseDir, "auth.json")
+func setupAuth(metaDir string) *service.AuthService {
+	authPath := filepath.Join(metaDir, "auth.json")
 	authService := service.NewAuthService(authPath)
 
 	if err := authService.Load(); err != nil {
@@ -92,7 +85,7 @@ func setupAuth(baseDir string) *service.AuthService {
 	return authService
 }
 
-// setupFiberApp настраивает Fiber-приложение
+// setupFiberApp настраивает Fiber‑приложение
 func setupFiberApp(baseDir string, authService *service.AuthService) *fiber.App {
 	app := fiber.New()
 
@@ -110,23 +103,28 @@ func setupFiberApp(baseDir string, authService *service.AuthService) *fiber.App 
 	return app
 }
 
-// ensureMediaFS проверяет и создает директорию .mediafs
-func ensureMediaFS() string {
+// ensureMediaFS проверяет и создаёт директории ~/.mediafs и ~/.mediafs/.meta
+func ensureMediaFS() (mediafsPath string, metaPath string) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal("Can't find home dir:", err)
 	}
 
-	path := filepath.Join(home, ".mediafs")
-	if err = os.MkdirAll(path, 0755); err != nil {
+	mediafsPath = filepath.Join(home, ".mediafs")
+	if err = os.MkdirAll(mediafsPath, 0o755); err != nil {
 		log.Fatal("Can't create mediafs dir:", err)
 	}
 
-	return path
+	metaPath = filepath.Join(mediafsPath, ".meta")
+	if err = os.MkdirAll(metaPath, 0o755); err != nil {
+		log.Fatal("Can't create .meta dir:", err)
+	}
+
+	return mediafsPath, metaPath
 }
 
-// handlePasswordHashing обрабатывает команду хеширования пароля
-func handlePasswordHashing() {
+// handlePasswordHashing обрабатывает команду hash-password и получает путь к мета‑директории извне
+func handlePasswordHashing(metaDir string) {
 	hashCmd := flag.NewFlagSet(cmdHashPasswd, flag.ExitOnError)
 	passwordPtr := hashCmd.String("password", "", "Password to hash and save")
 	_ = hashCmd.Parse(os.Args[2:])
@@ -135,13 +133,9 @@ func handlePasswordHashing() {
 		log.Fatal("❌ Please provide --password")
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal("Can't find home dir:", err)
-	}
-	authPath := filepath.Join(home, ".mediafs", "auth.json")
-
+	authPath := filepath.Join(metaDir, "auth.json")
 	authService := service.NewAuthService(authPath)
+
 	if _, err := os.Stat(authPath); err == nil {
 		var response string
 		fmt.Printf("⚠️  %s already exists. Overwrite? Type 'yes' to confirm: ", authPath)
