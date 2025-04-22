@@ -35,7 +35,7 @@ func ListFiles(baseDir string) fiber.Handler {
 		for _, entry := range entries {
 			if !entry.IsDir() {
 				ext := filepath.Ext(entry.Name())
-				if ext == ".mp4" || ext == ".ts" {
+				if ext == ".mp4" {
 					fullPath := filepath.Join(baseDir, entry.Name())
 					info, err := os.Stat(fullPath)
 					if err != nil {
