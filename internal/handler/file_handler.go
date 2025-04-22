@@ -1,19 +1,19 @@
 package handler
 
 import (
+	"encoding/base32"
 	"fmt"
+	"github.com/gofiber/fiber/v2"
 	"io"
 	"mediafs/internal/media"
 	"mime"
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
+	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/zeebo/blake3"
 )
-
-var resolutionCache sync.Map
 
 func ListFiles(baseDir string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -23,6 +23,7 @@ func ListFiles(baseDir string) fiber.Handler {
 		}
 
 		type MediaFile struct {
+			ID         string  `json:"id"`
 			Name       string  `json:"name"`
 			Size       int64   `json:"size"`
 			Resolution *string `json:"resolution"`
@@ -45,11 +46,12 @@ func ListFiles(baseDir string) fiber.Handler {
 					duration := media.GetVideoDuration(fullPath)
 
 					files = append(files, MediaFile{
+						ID:         IDFromNameSize(entry.Name(), info.Size()),
 						Name:       entry.Name(),
 						Size:       info.Size(),
 						Resolution: resolution,
 						Duration:   duration,
-						PreviewURL: nil, // можно позже формировать
+						PreviewURL: nil,
 					})
 				}
 			}
@@ -140,4 +142,14 @@ func DeleteFile(baseDir string) fiber.Handler {
 
 		return c.JSON(fiber.Map{"message": "deleted"})
 	}
+}
+
+func IDFromNameSize(name string, size int64) string {
+	canonical := fmt.Sprintf("%s:%d", strings.ToLower(strings.TrimSpace(name)), size)
+
+	hash := blake3.Sum256([]byte(canonical)) // 256‑бит
+	sum := hash[:16]                         // берём первые 128‑бит
+
+	enc := base32.StdEncoding.WithPadding(base32.NoPadding)
+	return enc.EncodeToString(sum) // ≈26 символов
 }
