@@ -19,22 +19,42 @@ fi
 BASENAME=$(basename "$INPUT" .ts)
 OUTPUT_DIR="./$BASENAME"
 
-echo "📦 Converting $INPUT to HLS → $OUTPUT_DIR"
+echo "📦 Converting $INPUT to HLS (no re-encoding) → $OUTPUT_DIR"
 
 mkdir -p "$OUTPUT_DIR"
 
-# Генерация HLS с выровненными ключевыми кадрами каждые 10 секунд
-ffmpeg -i "$INPUT" \
-  -c:v libx264 -preset veryfast -crf 23 \
-  -c:a aac -b:a 128k \
-  -force_key_frames "expr:gte(t,n_forced*10)" \
+# 1️⃣ Попытка сохранить видео и аудио как есть
+echo "🎧 Trying with original audio..."
+if ffmpeg -i "$INPUT" \
+  -c:v copy \
+  -c:a aac -b:a 128k -ac 2 -ar 48000 -strict -2 \
   -hls_time 10 \
   -hls_segment_type mpegts \
   -hls_segment_filename "$OUTPUT_DIR/%d.ts" \
   -hls_list_size 0 \
-  -f hls "$OUTPUT_DIR/playlist.m3u8"
+  -f hls "$OUTPUT_DIR/playlist.m3u8"; then
 
-echo "✅ HLS created successfully in $OUTPUT_DIR"
+  echo "✅ HLS (video copy, audio AAC) created successfully in $OUTPUT_DIR"
+
+else
+  echo "⚠️  Audio processing failed. Retrying without audio..."
+
+  # 2️⃣ Fallback: видео сохраняем, аудио вырезаем
+  if ffmpeg -i "$INPUT" \
+    -c:v copy \
+    -an \
+    -hls_time 10 \
+    -hls_segment_type mpegts \
+    -hls_segment_filename "$OUTPUT_DIR/%d.ts" \
+    -hls_list_size 0 \
+    -f hls "$OUTPUT_DIR/playlist.m3u8"; then
+
+    echo "✅ HLS created WITHOUT audio in $OUTPUT_DIR"
+  else
+    echo "❌ Failed to generate HLS with or without audio."
+    exit 1
+  fi
+fi
 
 rm -f "$INPUT"
 echo "🗑️  Deleted original file: $INPUT"
