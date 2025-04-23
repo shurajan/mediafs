@@ -89,16 +89,17 @@ func setupAuth(metaDir string) *service.AuthService {
 func setupFiberApp(baseDir string, authService *service.AuthService) *fiber.App {
 	app := fiber.New()
 
-	// Маршрут аутентификации
+	// Аутентификация
 	app.Post("/auth", handler.AuthHandler(authService))
 
-	// Middleware для всех защищенных маршрутов
+	// Middleware авторизации
 	app.Use(middleware.BearerAuthMiddleware(authService))
 
-	// Маршруты файлового сервиса
-	app.Get("/files", handler.ListFiles(baseDir))
-	app.Get("/files/:filename", handler.StreamFile(baseDir))
-	app.Delete("/files/:filename", handler.DeleteFile(baseDir))
+	// HLS-файловый сервис
+	app.Get("/videos", handler.ListFiles(baseDir))                                 // список видео
+	app.Get("/videos/:filename/playlist.m3u8", handler.StreamHLSPlaylist(baseDir)) // .m3u8
+	app.Get("/videos/:filename/:segment", handler.StreamHLSSegment(baseDir))       // .ts
+	app.Delete("/videos/:filename", handler.DeleteFile(baseDir))                   // удаление всей папки
 
 	return app
 }

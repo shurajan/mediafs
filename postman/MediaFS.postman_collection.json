@@ -2,7 +2,7 @@
   "info": {
     "name": "MediaFS",
     "_postman_id": "mediafs-collection-uuid",
-    "description": "Postman collection for testing MediaFS API",
+    "description": "Postman collection for testing MediaFS HLS API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -42,70 +42,82 @@
       ]
     },
     {
-      "name": "List Files",
+      "name": "List Videos",
       "request": {
         "method": "GET",
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{mediafs_token}}",
-            "type": "text"
+            "value": "Bearer {{mediafs_token}}"
           }
         ],
         "url": {
-          "raw": "http://localhost:8000/files",
+          "raw": "http://localhost:8000/videos",
           "protocol": "http",
           "host": ["localhost"],
           "port": "8000",
-          "path": ["files"]
+          "path": ["videos"]
         }
-      },
-      "response": []
+      }
     },
     {
-      "name": "Get File",
+      "name": "Get Playlist (.m3u8)",
       "request": {
         "method": "GET",
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{mediafs_token}}",
-            "type": "text"
+            "value": "Bearer {{mediafs_token}}"
           }
         ],
         "url": {
-          "raw": "http://localhost:8000/files/{{filename}}",
+          "raw": "http://localhost:8000/videos/{{filename}}/playlist.m3u8",
           "protocol": "http",
           "host": ["localhost"],
           "port": "8000",
-          "path": ["files", "{{filename}}"]
+          "path": ["videos", "{{filename}}", "playlist.m3u8"]
         }
-      },
-      "response": []
+      }
     },
     {
-      "name": "Delete File",
+      "name": "Get Segment (.ts)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{mediafs_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8000/videos/{{filename}}/{{segment}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["videos", "{{filename}}", "{{segment}}"]
+        }
+      }
+    },
+    {
+      "name": "Delete Video",
       "request": {
         "method": "DELETE",
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{mediafs_token}}",
-            "type": "text"
+            "value": "Bearer {{mediafs_token}}"
           }
         ],
         "url": {
-          "raw": "http://localhost:8000/files/{{filename}}",
+          "raw": "http://localhost:8000/videos/{{filename}}",
           "protocol": "http",
           "host": ["localhost"],
           "port": "8000",
-          "path": ["files", "{{filename}}"]
+          "path": ["videos", "{{filename}}"]
         }
-      },
-      "response": []
+      }
     }
   ],
-  "event": [],
   "variable": [
     {
       "key": "mediafs_token",
@@ -114,7 +126,12 @@
     },
     {
       "key": "filename",
-      "value": "example.mp4",
+      "value": "video1",
+      "type": "string"
+    },
+    {
+      "key": "segment",
+      "value": "0.ts",
       "type": "string"
     }
   ]
