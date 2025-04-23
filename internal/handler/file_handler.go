@@ -72,10 +72,10 @@ func StreamFile(baseDir string) fiber.Handler {
 			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
-		defer file.Close()
 
 		stat, err := file.Stat()
 		if err != nil {
+			file.Close()
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
 		size := stat.Size()
@@ -88,13 +88,11 @@ func StreamFile(baseDir string) fiber.Handler {
 
 		rangeHeader := c.Get("Range")
 		if rangeHeader == "" {
-			c.Set("Content-Type", mimeType)
-			c.Set("Content-Length", fmt.Sprintf("%d", size))
-			c.Set("Accept-Ranges", "bytes")
+			// Полная передача
 			c.Status(fiber.StatusOK)
-
-			_, err := io.Copy(c, file)
-			return err
+			c.Set("Content-Type", mimeType)
+			c.Set("Accept-Ranges", "bytes")
+			return StreamRange(c, file, 0, size-1, size)
 		}
 
 		// Обработка Range-запроса
@@ -103,25 +101,18 @@ func StreamFile(baseDir string) fiber.Handler {
 		if n == 1 || end >= size {
 			end = size - 1
 		}
-		length := end - start + 1
-
-		_, err = file.Seek(start, io.SeekStart)
-		if err != nil {
-			return fiber.ErrInternalServerError
+		if start > end || start >= size {
+			file.Close()
+			return c.Status(fiber.StatusRequestedRangeNotSatisfiable).JSON(fiber.Map{"error": "invalid range"})
 		}
 
 		c.Status(fiber.StatusPartialContent)
 		c.Set("Content-Type", mimeType)
 		c.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, size))
-		c.Set("Content-Length", strconv.FormatInt(length, 10))
+		c.Set("Content-Length", strconv.FormatInt(end-start+1, 10))
 		c.Set("Accept-Ranges", "bytes")
 
-		_, err = io.CopyN(c, file, length)
-		if err != nil {
-			fmt.Println("❌ io.CopyN error:", err)
-			return fiber.ErrInternalServerError
-		}
-		return nil
+		return StreamRange(c, file, start, end, size)
 	}
 }
 
@@ -142,6 +133,44 @@ func DeleteFile(baseDir string) fiber.Handler {
 
 		return c.JSON(fiber.Map{"message": "deleted"})
 	}
+}
+
+func StreamRange(c *fiber.Ctx, file *os.File, start, end, totalSize int64) error {
+	defer file.Close()
+
+	length := end - start + 1
+
+	_, err := file.Seek(start, io.SeekStart)
+	if err != nil {
+		return fiber.ErrInternalServerError
+	}
+
+	buf := make([]byte, 512*1024) // ✅ 512 KB буфер
+	var written int64
+	for written < length {
+		toRead := len(buf)
+		remaining := length - written
+		if remaining < int64(toRead) {
+			toRead = int(remaining)
+		}
+		n, readErr := file.Read(buf[:toRead])
+		if n > 0 {
+			_, writeErr := c.Write(buf[:n])
+			if writeErr != nil {
+				fmt.Println("❌ Write error:", writeErr)
+				return nil // клиент отключился — это нормально
+			}
+			written += int64(n)
+		}
+		if readErr != nil {
+			if readErr != io.EOF {
+				fmt.Println("❌ Read error:", readErr)
+			}
+			break
+		}
+	}
+
+	return nil
 }
 
 func IDFromNameSize(name string, size int64) string {
