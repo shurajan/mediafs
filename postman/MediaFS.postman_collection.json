@@ -116,6 +116,49 @@
           "path": ["videos", "{{filename}}"]
         }
       }
+    },
+    {
+      "name": "Cut Clip",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{mediafs_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from\": 5,\n  \"to\": 10,\n  \"name\": \"cut_demo\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/cut/{{filename}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["cut", "{{filename}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const res = pm.response.json();",
+              "if (res.file) {",
+              "  console.log(`🎬 Cut created: ${res.file}`);",
+              "} else {",
+              "  console.error(\"❌ Failed to create cut\");",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
     }
   ],
   "variable": [

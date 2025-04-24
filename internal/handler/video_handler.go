@@ -8,13 +8,14 @@ import (
 )
 
 type MediaFile struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	HLSURL     string `json:"hlsURL"`
-	Duration   int    `json:"duration,omitempty"`   // seconds
-	Resolution string `json:"resolution,omitempty"` // video quality
-	CreatedAt  string `json:"createdAt,omitempty"`  // RFC3339
-	SizeMB     int    `json:"sizeMB,omitempty"`     // rounded megabytes
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	HLSURL     string   `json:"hlsURL"`
+	Duration   int      `json:"duration,omitempty"`   // seconds
+	Resolution string   `json:"resolution,omitempty"` // video quality
+	CreatedAt  string   `json:"createdAt,omitempty"`  // RFC3339
+	SizeMB     int      `json:"sizeMB,omitempty"`     // rounded megabytes
+	Clips      []string `json:"clips,omitempty"`      // extra .m3u8 files (except playlist/master)
 }
 
 func ListVideos(baseDir string) fiber.Handler {
@@ -45,6 +46,7 @@ func ListVideos(baseDir string) fiber.Handler {
 				Resolution: info.Resolution(),
 				CreatedAt:  info.CreatedAt(),
 				SizeMB:     info.SizeMB(),
+				Clips:      info.ExtraPlaylists(),
 			})
 		}
 
@@ -54,9 +56,13 @@ func ListVideos(baseDir string) fiber.Handler {
 
 func StreamHLSPlaylist(baseDir string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		filename := filepath.Base(c.Params("filename"))
-		playlistPath := filepath.Join(baseDir, filename, "playlist.m3u8")
+		videoname := filepath.Base(c.Params("videoname"))
+		playlist := filepath.Base(c.Params("playlist")) // support e.g. cut_x_y.m3u8
+		if playlist == "" {
+			playlist = "playlist.m3u8"
+		}
 
+		playlistPath := filepath.Join(baseDir, videoname, playlist)
 		if _, err := os.Stat(playlistPath); err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "playlist not found"})
 		}
@@ -66,9 +72,9 @@ func StreamHLSPlaylist(baseDir string) fiber.Handler {
 
 func StreamHLSSegment(baseDir string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		filename := filepath.Base(c.Params("filename"))
+		videoname := filepath.Base(c.Params("videoname"))
 		segment := filepath.Base(c.Params("segment"))
-		segmentPath := filepath.Join(baseDir, filename, segment)
+		segmentPath := filepath.Join(baseDir, videoname, segment)
 
 		if _, err := os.Stat(segmentPath); err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "segment not found"})
@@ -79,8 +85,8 @@ func StreamHLSSegment(baseDir string) fiber.Handler {
 
 func DeleteVideo(baseDir string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		filename := filepath.Base(c.Params("filename"))
-		fullPath := filepath.Join(baseDir, filename)
+		videoname := filepath.Base(c.Params("videoname"))
+		fullPath := filepath.Join(baseDir, videoname)
 
 		if err := os.RemoveAll(fullPath); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete"})

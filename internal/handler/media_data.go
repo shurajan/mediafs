@@ -52,6 +52,29 @@ func (m *MediaInfo) hasMaster() bool {
 	return err == nil
 }
 
+// ExtraPlaylists returns all .m3u8 files in EntryPath except master.m3u8 and playlist.m3u8
+func (m *MediaInfo) ExtraPlaylists() []string {
+	entries, err := os.ReadDir(m.EntryPath)
+	if err != nil {
+		return nil
+	}
+
+	var extras []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, ".m3u8") &&
+			name != "playlist.m3u8" &&
+			name != "master.m3u8" {
+			extras = append(extras, name)
+		}
+	}
+
+	return extras
+}
+
 func (m *MediaInfo) ID() string {
 	mediaPath := filepath.Join(m.EntryPath, "playlist.m3u8")
 
