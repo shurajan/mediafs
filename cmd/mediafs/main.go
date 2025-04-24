@@ -96,10 +96,10 @@ func setupFiberApp(baseDir string, authService *service.AuthService) *fiber.App 
 	app.Use(middleware.BearerAuthMiddleware(authService))
 
 	// HLS-файловый сервис
-	app.Get("/videos", handler.ListFiles(baseDir))                                 // список видео
-	app.Get("/videos/:filename/playlist.m3u8", handler.StreamHLSPlaylist(baseDir)) // .m3u8
-	app.Get("/videos/:filename/:segment", handler.StreamHLSSegment(baseDir))       // .ts
-	app.Delete("/videos/:filename", handler.DeleteFile(baseDir))                   // удаление всей папки
+	app.Get("/videos", handler.ListVideos(baseDir))
+	app.Get("/videos/:filename/playlist.m3u8", handler.StreamHLSPlaylist(baseDir))
+	app.Get("/videos/:filename/:segment", handler.StreamHLSSegment(baseDir))
+	app.Delete("/videos/:filename", handler.DeleteVideo(baseDir))
 
 	return app
 }
