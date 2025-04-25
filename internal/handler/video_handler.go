@@ -9,11 +9,13 @@ import (
 )
 
 type PlaylistInfo struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Duration   int    `json:"duration"`
-	Resolution string `json:"resolution,omitempty"`
-	SizeMB     int    `json:"sizeMB,omitempty"`
+	ID                 string  `json:"id"`
+	Name               string  `json:"name"`
+	Duration           int     `json:"duration"`
+	Resolution         string  `json:"resolution,omitempty"`
+	SizeMB             int     `json:"sizeMB,omitempty"`
+	SegmentCount       int     `json:"segmentCount"`
+	AvgSegmentDuration float64 `json:"avgSegmentDuration"`
 }
 
 type MediaFile struct {
@@ -51,11 +53,13 @@ func ListVideos(baseDir string) fiber.Handler {
 			var playlistInfos []PlaylistInfo
 			for _, p := range playlists {
 				playlistInfos = append(playlistInfos, PlaylistInfo{
-					ID:         p.ID(),
-					Name:       p.Name(),
-					Duration:   p.Duration(),
-					Resolution: p.Resolution(),
-					SizeMB:     p.SizeMB(),
+					ID:                 p.ID(),
+					Name:               p.Name(),
+					Duration:           p.Duration(),
+					Resolution:         p.Resolution(),
+					SizeMB:             p.SizeMB(),
+					SegmentCount:       p.SegmentCount(),
+					AvgSegmentDuration: p.AvgSegmentDuration(),
 				})
 			}
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/grafov/m3u8"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,60 +26,43 @@ func (s *CutService) CreateClip(videoname string, from, to int, name string) (st
 	}
 	destM3U8 := filepath.Join(dir, name+".m3u8")
 
-	content, err := os.ReadFile(srcM3U8)
+	data, err := os.ReadFile(srcM3U8)
 	if err != nil {
 		return "", fmt.Errorf("failed to read playlist: %w", err)
 	}
 
-	lines := strings.Split(string(content), "\n")
-	var segments []string
-	segmentIndex := 0
-	var maxDuration float64
-	var mediaSequence int
+	playlist, listType, err := m3u8.DecodeFrom(strings.NewReader(string(data)), true)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse playlist: %w", err)
+	}
 
-	for i := 0; i < len(lines); i++ {
-		line := lines[i]
+	mediaPL, ok := playlist.(*m3u8.MediaPlaylist)
+	if !ok || listType != m3u8.MEDIA {
+		return "", fmt.Errorf("not a valid media playlist")
+	}
 
-		if strings.HasPrefix(line, "#EXTINF") {
-			if segmentIndex == from {
-				mediaSequence = segmentIndex
-			}
-			if segmentIndex >= from && segmentIndex < to {
-				segments = append(segments, line)
+	// Make sure range is valid
+	if from < 0 || to > int(mediaPL.Count()) || from >= to {
+		return "", fmt.Errorf("invalid segment range: from=%d to=%d", from, to)
+	}
 
-				// parse duration
-				var duration float64
-				fmt.Sscanf(line, "#EXTINF:%f,", &duration)
-				if duration > maxDuration {
-					maxDuration = duration
-				}
+	newPL, err := m3u8.NewMediaPlaylist(uint(to-from), uint(to-from))
+	if err != nil {
+		return "", fmt.Errorf("failed to create new media playlist: %w", err)
+	}
+	newPL.SeqNo = uint64(from)
 
-				if i+1 < len(lines) {
-					segments = append(segments, lines[i+1])
-				}
-				i++
-			}
-			segmentIndex++
+	for i := from; i < to; i++ {
+		seg := mediaPL.Segments[i]
+		if seg == nil {
+			continue
 		}
+		_ = newPL.AppendSegment(seg)
 	}
 
-	if len(segments) == 0 {
-		return "", fmt.Errorf("no segments in range")
-	}
+	newPL.Close()
 
-	var b strings.Builder
-	b.WriteString("#EXTM3U\n")
-	b.WriteString("#EXT-X-VERSION:3\n")
-	b.WriteString(fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", int(maxDuration)+1))
-	b.WriteString(fmt.Sprintf("#EXT-X-MEDIA-SEQUENCE:%d\n", mediaSequence))
-
-	for _, line := range segments {
-		b.WriteString(line)
-		b.WriteString("\n")
-	}
-	b.WriteString("#EXT-X-ENDLIST\n")
-
-	if err := os.WriteFile(destM3U8, []byte(b.String()), 0644); err != nil {
+	if err := os.WriteFile(destM3U8, []byte(newPL.Encode().String()), 0644); err != nil {
 		return "", fmt.Errorf("failed to write cut playlist: %w", err)
 	}
 

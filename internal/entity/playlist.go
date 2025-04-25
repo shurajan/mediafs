@@ -15,10 +15,12 @@ type Playlist struct {
 }
 
 type cachedInfo struct {
-	duration   int
-	sizeMB     int
-	resolution string
-	loaded     bool
+	duration      int
+	sizeMB        int
+	resolution    string
+	segmentCount  int
+	avgSegmentDur float64
+	loaded        bool
 }
 
 func (p *Playlist) ID() string {
@@ -49,6 +51,16 @@ func (p *Playlist) Resolution() string {
 	return p.cached.resolution
 }
 
+func (p *Playlist) SegmentCount() int {
+	p.ensureCached()
+	return p.cached.segmentCount
+}
+
+func (p *Playlist) AvgSegmentDuration() float64 {
+	p.ensureCached()
+	return p.cached.avgSegmentDur
+}
+
 func (p *Playlist) ensureCached() {
 	if p.cached != nil && p.cached.loaded {
 		return
@@ -57,6 +69,9 @@ func (p *Playlist) ensureCached() {
 	duration := 0
 	size := int64(0)
 	var resolution string
+	segmentCount := 0
+	totalSegDuration := 0.0
+	avgSegmentDur := 0.0
 
 	// Parse media playlist
 	pl, err := p.parseMediaPlaylist()
@@ -67,6 +82,8 @@ func (p *Playlist) ensureCached() {
 				continue
 			}
 			duration += int(seg.Duration)
+			totalSegDuration += seg.Duration
+			segmentCount++
 
 			tsPath := filepath.Join(dir, seg.URI)
 			if info, err := os.Stat(tsPath); err == nil && !info.IsDir() {
@@ -80,11 +97,16 @@ func (p *Playlist) ensureCached() {
 		resolution = p.FFProbeResolution()
 	}
 
+	if segmentCount > 0 && duration > 0 {
+		avgSegmentDur = totalSegDuration / float64(segmentCount)
+	}
 	p.cached = &cachedInfo{
-		duration:   duration,
-		sizeMB:     int(math.Round(float64(size) / 1024.0 / 1024.0)),
-		resolution: resolution,
-		loaded:     true,
+		duration:      duration,
+		sizeMB:        int(math.Round(float64(size) / 1024.0 / 1024.0)),
+		resolution:    resolution,
+		segmentCount:  segmentCount,
+		avgSegmentDur: avgSegmentDur,
+		loaded:        true,
 	}
 }
 
