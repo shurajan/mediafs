@@ -30,12 +30,13 @@ func main() {
 		return
 	}
 	authService := setupAuth(metaDir)
+	cutService := service.NewCutService(baseDir)
 	// Настройка контекста для управления жизненным циклом
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Инициализация компонентов
-	app := setupFiberApp(baseDir, authService)
+	app := setupFiberApp(baseDir, authService, cutService)
 
 	// WaitGroup для всех горутин
 	var wg sync.WaitGroup
@@ -86,7 +87,10 @@ func setupAuth(metaDir string) *service.AuthService {
 }
 
 // setupFiberApp настраивает Fiber‑приложение
-func setupFiberApp(baseDir string, authService *service.AuthService) *fiber.App {
+func setupFiberApp(baseDir string,
+	authService *service.AuthService,
+	cutService *service.CutService) *fiber.App {
+
 	app := fiber.New()
 
 	// Аутентификация
@@ -97,9 +101,12 @@ func setupFiberApp(baseDir string, authService *service.AuthService) *fiber.App 
 
 	// HLS-файловый сервис
 	app.Get("/videos", handler.ListVideos(baseDir))
-	app.Get("/videos/:filename/playlist.m3u8", handler.StreamHLSPlaylist(baseDir))
-	app.Get("/videos/:filename/:segment", handler.StreamHLSSegment(baseDir))
-	app.Delete("/videos/:filename", handler.DeleteVideo(baseDir))
+	app.Get("/videos/:videoname/:playlist", handler.StreamHLSPlaylist(baseDir))
+	app.Get("/videos/:videoname/:segment", handler.StreamHLSSegment(baseDir))
+	app.Delete("/videos/:videoname", handler.DeleteVideo(baseDir))
+
+	// Редактирование видео
+	app.Post("/cut/:videoname", handler.CutHandler(cutService))
 
 	return app
 }
