@@ -5,6 +5,7 @@ go 1.24
 require (
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/google/uuid v1.6.0
+	github.com/grafov/m3u8 v0.12.1
 	github.com/zeebo/blake3 v0.2.4
 	golang.org/x/crypto v0.37.0
 )
