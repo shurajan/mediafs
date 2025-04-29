@@ -76,38 +76,44 @@ func ListVideos(baseDir string) fiber.Handler {
 	}
 }
 
-func StreamHLSPlaylist(baseDir string) fiber.Handler {
+// StreamHLSFile - теперь умеет правильно ставить Content-Type для mp4, jpg, vtt
+func StreamHLSFile(baseDir string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		videoname := filepath.Base(c.Params("videoname"))
-		playlist := filepath.Base(c.Params("playlist"))
-		if playlist == "" {
-			playlist = "playlist.m3u8"
-		}
+		relativePath := filepath.Clean(c.Params("*")) // <-- относительный путь внутри видео папки
 
-		playlistPath := filepath.Join(baseDir, videoname, playlist)
-		if _, err := os.Stat(playlistPath); err != nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "playlist not found",
+		fullDir := filepath.Join(baseDir, videoname)
+		fullPath := filepath.Join(fullDir, relativePath)
+
+		if !strings.HasPrefix(fullPath, fullDir) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "invalid path",
 			})
 		}
 
-		return c.SendFile(playlistPath)
-	}
-}
-
-func StreamHLSSegment(baseDir string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		videoname := filepath.Base(c.Params("videoname"))
-		segment := filepath.Base(c.Params("segment"))
-		segmentPath := filepath.Join(baseDir, videoname, segment)
-
-		if _, err := os.Stat(segmentPath); err != nil {
+		if _, err := os.Stat(fullPath); err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "segment not found",
+				"error": "file not found",
 			})
 		}
 
-		return c.SendFile(segmentPath)
+		ext := strings.ToLower(filepath.Ext(fullPath))
+		switch ext {
+		case ".m3u8":
+			c.Type("application/vnd.apple.mpegurl")
+		case ".ts":
+			c.Type("video/MP2T")
+		case ".jpg", ".jpeg":
+			c.Type("image/jpeg")
+		case ".mp4":
+			c.Type("video/mp4")
+		case ".vtt":
+			c.Type("text/vtt")
+		default:
+			c.Type("application/octet-stream")
+		}
+
+		return c.SendFile(fullPath)
 	}
 }
 

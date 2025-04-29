@@ -85,7 +85,7 @@ func (p *Playlist) ensureCached() {
 			totalSegDuration += seg.Duration
 			segmentCount++
 
-			tsPath := filepath.Join(dir, seg.URI)
+			tsPath := filepath.Join(dir, filepath.FromSlash(seg.URI))
 			if info, err := os.Stat(tsPath); err == nil && !info.IsDir() {
 				size += info.Size()
 			}
@@ -144,7 +144,7 @@ func (p *Playlist) FFProbeResolution() string {
 			continue
 		}
 
-		tsPath := filepath.Join(dir, seg.URI)
+		tsPath := filepath.Join(dir, filepath.FromSlash(seg.URI))
 		if _, err := os.Stat(tsPath); err == nil {
 			cmd := exec.Command("ffprobe",
 				"-v", "error",

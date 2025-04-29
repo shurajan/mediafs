@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"log"
 	"os"
 	"os/signal"
@@ -22,15 +23,22 @@ const (
 	cmdHashPasswd = "hash-password"
 )
 
+var enableLogger bool
+
 func main() {
+	flag.BoolVar(&enableLogger, "log", false, "Enable HTTP request logging")
+	flag.Parse()
+
 	baseDir, metaDir := ensureMediaFS()
 
 	if len(os.Args) > 1 && os.Args[1] == cmdHashPasswd {
 		handlePasswordHashing(metaDir)
 		return
 	}
+
 	authService := setupAuth(metaDir)
 	cutService := service.NewCutService(baseDir)
+
 	// Настройка контекста для управления жизненным циклом
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -93,6 +101,12 @@ func setupFiberApp(baseDir string,
 
 	app := fiber.New()
 
+	if enableLogger {
+		app.Use(logger.New(logger.Config{
+			Output: os.Stdout,
+		}))
+	}
+
 	// Аутентификация
 	app.Post("/auth", handler.AuthHandler(authService))
 
@@ -101,8 +115,7 @@ func setupFiberApp(baseDir string,
 
 	// HLS-файловый сервис
 	app.Get("/videos", handler.ListVideos(baseDir))
-	app.Get("/videos/:videoname/:playlist", handler.StreamHLSPlaylist(baseDir))
-	app.Get("/videos/:videoname/:segment", handler.StreamHLSSegment(baseDir))
+	app.Get("/videos/:videoname/*", handler.StreamHLSFile(baseDir))
 	app.Delete("/videos/:videoname", handler.DeleteVideo(baseDir))
 
 	// Редактирование видео
