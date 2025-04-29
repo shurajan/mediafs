@@ -109,6 +109,8 @@ func StreamHLSFile(baseDir string) fiber.Handler {
 			c.Type("video/mp4")
 		case ".vtt":
 			c.Type("text/vtt")
+		case ".zip":
+			c.Type("application/zip")
 		default:
 			c.Type("application/octet-stream")
 		}
