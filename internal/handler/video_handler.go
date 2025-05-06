@@ -100,19 +100,19 @@ func StreamHLSFile(baseDir string) fiber.Handler {
 		ext := strings.ToLower(filepath.Ext(fullPath))
 		switch ext {
 		case ".m3u8":
-			c.Type("application/vnd.apple.mpegurl")
+			c.Response().Header.Set("Content-Type", "application/vnd.apple.mpegurl")
 		case ".ts":
-			c.Type("video/MP2T")
+			c.Response().Header.Set("Content-Type", "video/MP2T")
 		case ".jpg", ".jpeg":
-			c.Type("image/jpeg")
+			c.Response().Header.Set("Content-Type", "image/jpeg")
 		case ".mp4":
-			c.Type("video/mp4")
+			c.Response().Header.Set("Content-Type", "video/mp4")
 		case ".vtt":
-			c.Type("text/vtt")
+			c.Response().Header.Set("Content-Type", "text/vtt")
 		case ".zip":
-			c.Type("application/zip")
+			c.Response().Header.Set("Content-Type", "application/zip")
 		default:
-			c.Type("application/octet-stream")
+			c.Response().Header.Set("Content-Type", "application/octet-stream")
 		}
 
 		return c.SendFile(fullPath)
