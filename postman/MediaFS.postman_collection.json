@@ -90,6 +90,22 @@
       }
     },
     {
+      "name": "Get Keyframe",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{mediafs_token}}" }
+        ],
+        "url": {
+          "raw": "http://localhost:8000/videos/{{filename}}/keyframes/{{keyframe}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["videos", "{{filename}}", "keyframes", "{{keyframe}}"]
+        }
+      }
+    },
+    {
       "name": "Get Sprite Image (.jpg)",
       "request": {
         "method": "GET",
@@ -194,6 +210,7 @@
   "variable": [
     { "key": "mediafs_token", "value": "", "type": "string" },
     { "key": "filename", "value": "your_video_folder_name", "type": "string" },
-    { "key": "segment", "value": "0.ts", "type": "string" }
+    { "key": "segment", "value": "0.ts", "type": "string" },
+    { "key": "keyframe", "value": "segment_0000.jpg", "type": "string" }
   ]
 }

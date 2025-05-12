@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -66,14 +67,13 @@ func (p *Playlist) ensureCached() {
 		return
 	}
 
-	duration := 0
 	size := int64(0)
 	var resolution string
 	segmentCount := 0
 	totalSegDuration := 0.0
 	avgSegmentDur := 0.0
 
-	// Parse media playlist
+	// parse playlist
 	pl, err := p.parseMediaPlaylist()
 	if err == nil {
 		dir := filepath.Dir(p.Path)
@@ -81,7 +81,6 @@ func (p *Playlist) ensureCached() {
 			if seg == nil || seg.URI == "" {
 				continue
 			}
-			duration += int(seg.Duration)
 			totalSegDuration += seg.Duration
 			segmentCount++
 
@@ -96,10 +95,15 @@ func (p *Playlist) ensureCached() {
 	if resolution == "" {
 		resolution = p.FFProbeResolution()
 	}
-
-	if segmentCount > 0 && duration > 0 {
+	
+	duration := int(math.Round(p.ffprobeDuration()))
+	if duration == 0 && segmentCount > 0 {
+		duration = int(math.Round(totalSegDuration))
+	}
+	if segmentCount > 0 {
 		avgSegmentDur = totalSegDuration / float64(segmentCount)
 	}
+
 	p.cached = &cachedInfo{
 		duration:      duration,
 		sizeMB:        int(math.Round(float64(size) / 1024.0 / 1024.0)),
@@ -169,6 +173,28 @@ func (p *Playlist) FFProbeResolution() string {
 		}
 	}
 	return ""
+}
+
+func (p *Playlist) ffprobeDuration() float64 {
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		p.Path,
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+
+	durationStr := strings.TrimSpace(string(output))
+	duration, err := strconv.ParseFloat(durationStr, 64)
+	if err != nil {
+		return 0
+	}
+
+	return duration
 }
 
 func (p *Playlist) parseMediaPlaylist() (*m3u8.MediaPlaylist, error) {

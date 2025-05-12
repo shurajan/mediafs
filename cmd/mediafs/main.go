@@ -118,6 +118,8 @@ func setupFiberApp(baseDir string,
 	app.Get("/videos/:videoname/*", handler.StreamHLSFile(baseDir))
 	app.Delete("/videos/:videoname", handler.DeleteVideo(baseDir))
 
+	app.Get("/keyframe/:videoname/:filename", handler.GetKeyFrameFile(baseDir))
+
 	// Редактирование видео
 	app.Post("/cut/:videoname", handler.CutHandler(cutService))
 
