@@ -8,22 +8,17 @@ import (
 	"strings"
 )
 
-type PlaylistInfo struct {
+type MediaFile struct {
 	ID                 string  `json:"id"`
 	Name               string  `json:"name"`
+	HLSURL             string  `json:"hlsURL"`
+	KeyframesURL       *string `json:"keyframesURL,omitempty"`
+	CreatedAt          string  `json:"createdAt,omitempty"`
 	Duration           int     `json:"duration"`
 	Resolution         string  `json:"resolution,omitempty"`
 	SizeMB             int     `json:"sizeMB,omitempty"`
 	SegmentCount       int     `json:"segmentCount"`
 	AvgSegmentDuration float64 `json:"avgSegmentDuration"`
-}
-
-type MediaFile struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	HLSURL    string         `json:"hlsURL"`
-	CreatedAt string         `json:"createdAt,omitempty"`
-	Playlists []PlaylistInfo `json:"playlists"`
 }
 
 func ListVideos(baseDir string) fiber.Handler {
@@ -45,30 +40,22 @@ func ListVideos(baseDir string) fiber.Handler {
 			folderName := entry.Name()
 			info := entity.NewMediaInfo(baseDir, folderName)
 
-			playlists := info.Playlists()
-			if len(playlists) == 0 {
+			playlist := info.Playlist()
+			if playlist == nil {
 				continue
 			}
 
-			var playlistInfos []PlaylistInfo
-			for _, p := range playlists {
-				playlistInfos = append(playlistInfos, PlaylistInfo{
-					ID:                 p.ID(),
-					Name:               p.Name(),
-					Duration:           p.Duration(),
-					Resolution:         p.Resolution(),
-					SizeMB:             p.SizeMB(),
-					SegmentCount:       p.SegmentCount(),
-					AvgSegmentDuration: p.AvgSegmentDuration(),
-				})
-			}
-
 			files = append(files, MediaFile{
-				ID:        info.ID(),
-				Name:      folderName,
-				HLSURL:    info.StreamURL(),
-				CreatedAt: info.CreatedAt(),
-				Playlists: playlistInfos,
+				ID:                 info.ID(),
+				Name:               folderName,
+				HLSURL:             info.StreamURL(),
+				KeyframesURL:       info.KeyframesURL(),
+				CreatedAt:          info.CreatedAt(),
+				Duration:           playlist.Duration(),
+				Resolution:         playlist.Resolution(),
+				SizeMB:             playlist.SizeMB(),
+				SegmentCount:       playlist.SegmentCount(),
+				AvgSegmentDuration: playlist.AvgSegmentDuration(),
 			})
 		}
 

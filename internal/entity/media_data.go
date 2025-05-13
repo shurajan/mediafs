@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -35,44 +34,23 @@ func (m *MediaInfo) CreatedAt() string {
 }
 
 func (m *MediaInfo) StreamURL() string {
-	return fmt.Sprintf("/videos/%s/", m.Folder)
+	return fmt.Sprintf("/videos/%s/playlist.m3u8", m.Folder)
 }
 
-func (m *MediaInfo) Playlists() []*Playlist {
-	entries, err := os.ReadDir(m.EntryPath)
-	if err != nil {
+func (m *MediaInfo) KeyframesURL() *string {
+	keyframesPath := filepath.Join(m.EntryPath, "keyframes")
+	info, err := os.Stat(keyframesPath)
+	if err != nil || !info.IsDir() {
 		return nil
 	}
+	url := fmt.Sprintf("/videos/%s/keyframes/", m.Folder)
+	return &url
+}
 
-	var master, playlist *Playlist
-	var others []*Playlist
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		name := entry.Name()
-		if !strings.HasSuffix(name, ".m3u8") {
-			continue
-		}
-		full := filepath.Join(m.EntryPath, name)
-		switch name {
-		case "master.m3u8":
-			master = &Playlist{Path: full}
-		case "playlist.m3u8":
-			playlist = &Playlist{Path: full}
-		default:
-			others = append(others, &Playlist{Path: full})
-		}
+func (m *MediaInfo) Playlist() *Playlist {
+	playlistPath := filepath.Join(m.EntryPath, "playlist.m3u8")
+	if _, err := os.Stat(playlistPath); err == nil {
+		return &Playlist{Path: playlistPath}
 	}
-
-	var result []*Playlist
-	if master != nil {
-		result = append(result, master)
-	}
-	if playlist != nil {
-		result = append(result, playlist)
-	}
-	result = append(result, others...)
-	return result
+	return nil
 }
