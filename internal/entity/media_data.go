@@ -43,7 +43,7 @@ func (m *MediaInfo) KeyframesURL() *string {
 	if err != nil || !info.IsDir() {
 		return nil
 	}
-	url := fmt.Sprintf("/videos/%s/keyframes/", m.Folder)
+	url := fmt.Sprintf("/keyframe/%s/", m.Folder)
 	return &url
 }
 
