@@ -119,6 +119,8 @@ func setupFiberApp(baseDir string,
 	app.Delete("/videos/:videoname", handler.DeleteVideo(baseDir))
 
 	app.Get("/keyframe/:videoname/:filename", handler.GetKeyFrameFile(baseDir))
+	app.Get("/nsfw/:videoname", handler.GetNsfwFrameList(baseDir))
+	app.Get("/nsfw/:videoname/:filename", handler.GetNsfwFrameFile(baseDir))
 
 	// Редактирование видео
 	app.Post("/cut/:videoname", handler.CutHandler(cutService))

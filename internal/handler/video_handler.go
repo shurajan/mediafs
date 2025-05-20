@@ -13,6 +13,7 @@ type MediaFile struct {
 	Name               string  `json:"name"`
 	HLSURL             string  `json:"hlsURL"`
 	KeyframesURL       *string `json:"keyframesURL,omitempty"`
+	NsfwframesURL      *string `json:"nsfwframesURL,omitempty"`
 	CreatedAt          string  `json:"createdAt,omitempty"`
 	Duration           int     `json:"duration"`
 	Resolution         string  `json:"resolution,omitempty"`
@@ -49,7 +50,8 @@ func ListVideos(baseDir string) fiber.Handler {
 				ID:                 info.ID(),
 				Name:               folderName,
 				HLSURL:             info.StreamURL(),
-				KeyframesURL:       info.KeyframesURL(),
+				KeyframesURL:       info.KeyFramesURL(),
+				NsfwframesURL:      info.NsfwFramesURL(),
 				CreatedAt:          info.CreatedAt(),
 				Duration:           playlist.Duration(),
 				Resolution:         playlist.Resolution(),
