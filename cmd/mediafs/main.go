@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"time"
 
 	"mediafs/internal/handler"
 	"mediafs/internal/middleware"
@@ -124,6 +125,13 @@ func setupFiberApp(baseDir string,
 
 	// Редактирование видео
 	app.Post("/cut/:videoname", handler.CutHandler(cutService))
+
+	// Анализ
+	taskManager := service.NewTaskManager()
+	nsfwService := service.NewNsfwService(15 * time.Minute)
+
+	app.Post("/nsfw-scan/:videoname", handler.NsfwScanHandler(baseDir, nsfwService, taskManager))
+	app.Get("/tasks/:taskID", handler.TaskStatusHandler(taskManager))
 
 	return app
 }
