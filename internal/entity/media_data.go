@@ -37,26 +37,6 @@ func (m *MediaInfo) StreamURL() string {
 	return fmt.Sprintf("/videos/%s/playlist.m3u8", m.Folder)
 }
 
-func (m *MediaInfo) KeyFramesURL() *string {
-	keyframesPath := filepath.Join(m.EntryPath, "keyframes")
-	info, err := os.Stat(keyframesPath)
-	if err != nil || !info.IsDir() {
-		return nil
-	}
-	url := fmt.Sprintf("/keyframe/%s/", m.Folder)
-	return &url
-}
-
-func (m *MediaInfo) NsfwFramesURL() *string {
-	keyframesPath := filepath.Join(m.EntryPath, "nsfw")
-	info, err := os.Stat(keyframesPath)
-	if err != nil || !info.IsDir() {
-		return nil
-	}
-	url := fmt.Sprintf("/nsfw/%s/", m.Folder)
-	return &url
-}
-
 func (m *MediaInfo) Playlist() *Playlist {
 	playlistPath := filepath.Join(m.EntryPath, "playlist.m3u8")
 	if _, err := os.Stat(playlistPath); err == nil {

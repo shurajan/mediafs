@@ -4,15 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"sync"
 	"syscall"
-	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 
 	"mediafs/internal/handler"
 	"mediafs/internal/middleware"
@@ -38,14 +38,13 @@ func main() {
 	}
 
 	authService := setupAuth(metaDir)
-	cutService := service.NewCutService(baseDir)
 
 	// Настройка контекста для управления жизненным циклом
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Инициализация компонентов
-	app := setupFiberApp(baseDir, authService, cutService)
+	app := setupFiberApp(baseDir, authService)
 
 	// WaitGroup для всех горутин
 	var wg sync.WaitGroup
@@ -97,8 +96,7 @@ func setupAuth(metaDir string) *service.AuthService {
 
 // setupFiberApp настраивает Fiber‑приложение
 func setupFiberApp(baseDir string,
-	authService *service.AuthService,
-	cutService *service.CutService) *fiber.App {
+	authService *service.AuthService) *fiber.App {
 
 	app := fiber.New()
 
@@ -118,20 +116,6 @@ func setupFiberApp(baseDir string,
 	app.Get("/videos", handler.ListVideos(baseDir))
 	app.Get("/videos/:videoname/*", handler.StreamHLSFile(baseDir))
 	app.Delete("/videos/:videoname", handler.DeleteVideo(baseDir))
-
-	app.Get("/keyframe/:videoname/:filename", handler.GetKeyFrameFile(baseDir))
-	app.Get("/nsfw/:videoname", handler.GetNsfwFrameList(baseDir))
-	app.Get("/nsfw/:videoname/:filename", handler.GetNsfwFrameFile(baseDir))
-
-	// Редактирование видео
-	app.Post("/cut/:videoname", handler.CutHandler(cutService))
-
-	// Анализ
-	taskManager := service.NewTaskManager()
-	nsfwService := service.NewNsfwService(15 * time.Minute)
-
-	app.Post("/nsfw-scan/:videoname", handler.NsfwScanHandler(baseDir, nsfwService, taskManager))
-	app.Get("/tasks/:taskID", handler.TaskStatusHandler(taskManager))
 
 	return app
 }
