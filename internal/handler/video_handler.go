@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"mediafs/internal/entity"
 	"os"
 	"path/filepath"
@@ -21,7 +21,7 @@ type MediaFile struct {
 }
 
 func ListVideos(baseDir string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		entries, err := os.ReadDir(baseDir)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -63,7 +63,7 @@ func ListVideos(baseDir string) fiber.Handler {
 
 // StreamHLSFile - теперь умеет правильно ставить Content-Type для mp4, jpg, vtt
 func StreamHLSFile(baseDir string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		videoname := filepath.Base(c.Params("videoname"))
 		relativePath := filepath.Clean(c.Params("*")) // <-- относительный путь внутри видео папки
 
@@ -105,7 +105,7 @@ func StreamHLSFile(baseDir string) fiber.Handler {
 }
 
 func DeleteVideo(baseDir string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		videoname := filepath.Base(c.Params("videoname"))
 		fullPath := filepath.Join(baseDir, videoname)
 

@@ -1,16 +1,16 @@
 package handler
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"mediafs/internal/service"
 )
 
 func AuthHandler(auth *service.AuthService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		var req struct {
 			Password string `json:"password"`
 		}
-		if err := c.BodyParser(&req); err != nil {
+		if err := c.Bind().Body(&req); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid json")
 		}
 

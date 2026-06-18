@@ -11,8 +11,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/logger"
 
 	"mediafs/internal/handler"
 	"mediafs/internal/middleware"
@@ -102,7 +102,7 @@ func setupFiberApp(baseDir string,
 
 	if enableLogger {
 		app.Use(logger.New(logger.Config{
-			Output: os.Stdout,
+			Stream: os.Stdout,
 		}))
 	}
 
